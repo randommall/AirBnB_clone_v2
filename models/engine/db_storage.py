@@ -5,7 +5,8 @@
 # handles the details of how to connect to the database and execute SQL commands
 from sqlalchemy import create_engine
 from os import getenv
-from sqlalchemy.orm import scoped_session, sessionmaker
+from sqlalchemy.orm import scoped_session, sessionmaker, Session
+from sqlalchemy.exc import InvalidRequestError
 from models.base_model import Base, BaseModel
 from models.amenity import Amenity
 from models.city import City
@@ -13,7 +14,6 @@ from models.place import Place
 from models.review import Review
 from models.state import State
 from models.user import User
-
 
 
 class DBStorage:
@@ -40,6 +40,7 @@ class DBStorage:
         """
         
         """
+        objs_list = []
         if cls:
             if isinstance(cls, str):
                 try:
@@ -47,7 +48,6 @@ class DBStorage:
                 except KeyError:
                     pass
             if issubclass(cls, Base):
-                objs_list = []
                 objs_list = self.__session.query(cls).all()
         else:
             for subclass in Base.__subclasses__():
@@ -63,6 +63,7 @@ class DBStorage:
         
         """
         self.__session.add(obj)
+        self.__session.commit()
 
     def save(self):
         """"
@@ -76,37 +77,14 @@ class DBStorage:
         
         """
         if obj:
-            self.__session.delete(pbj)
+            self.__session.delete(obj)
 
     def reload(self):
-        """"
+        """
         
         """
+        Base.metadata.drop_all(self.__engine)
         Base.metadata.create_all(self.__engine)
-        session_factory = sessionmaker(bind=self.__engine,
-                                       expire_on_commit=False)
+        session_factory = sessionmaker(bind=self.__engine, expire_on_commit=False)
         Session = scoped_session(session_factory)
-
         self.__session = Session()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
